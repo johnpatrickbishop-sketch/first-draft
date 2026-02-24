@@ -53,7 +53,7 @@ export default async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       return new Response(
-        JSON.stringify({ error: `Claude API error: ${response.status}`, details: errorText }),
+        JSON.stringify({ error: "Claude API error: " + response.status, details: errorText }),
         { status: response.status, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -74,8 +74,4 @@ export default async (req) => {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-};
-
-export const config = {
-  path: "/.netlify/functions/analyze",
 };
