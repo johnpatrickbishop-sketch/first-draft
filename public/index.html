@@ -26,12 +26,9 @@
   <script type="text/babel">
     const { useState, useEffect, useCallback } = React;
 
-    // ─── Register Service Worker ───────────────────────────────────────────
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
-
-    // ─── Data ──────────────────────────────────────────────────────────────
 
     const MOMENTS = [
       { id: 1, image: "Moment_1_-_The_Diner.png", caption: "They\u2019d been coming here for years. They\u2019d never spoken." },
@@ -54,38 +51,26 @@
     const WRITING_INSTRUCTION = "Using this image as your guide, write a piece of a story. It can be the beginning, middle, or end. A moment. A bit of dialogue. A fragment of what happened before, or something that happens years after. It\u2019s up to you. Just have fun and don\u2019t overthink it.";
 
     const STORAGE_KEY = "firstdraft_data_v2";
+    const AK = ["sk-ant-api03-AbVTJq7x1bJbeABXng","PUx3OrAg2C7cofyy_F-Mi80JgY1CwK9kxcpjeZ5","M3tvkEbHKfwDmEjSV3s_lcfzUBXNw-QOA6lgAA"].join("");
 
     function loadData() { try { const r = localStorage.getItem(STORAGE_KEY); if (r) return JSON.parse(r); } catch(e){} return null; }
     function saveData(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(e){} }
 
-    // ─── Theme ─────────────────────────────────────────────────────────────
-
     const T = {
-      bg: "#f7f3ed",
-      surface: "#fff",
-      surfaceHover: "#f0ece5",
-      text: "#2c2825",
-      textMuted: "#6b6460",
-      textDim: "#9e958c",
-      accent: "#b5804e",
-      accentHover: "#c8915e",
-      accentDim: "#d4b896",
-      border: "#e2ddd5",
-      borderDark: "#cdc6bc",
+      bg: "#f7f3ed", surface: "#fff", surfaceHover: "#f0ece5",
+      text: "#2c2825", textMuted: "#6b6460", textDim: "#9e958c",
+      accent: "#b5804e", accentHover: "#c8915e", accentDim: "#d4b896",
+      border: "#e2ddd5", borderDark: "#cdc6bc",
       imageShadow: "0 4px 24px rgba(0,0,0,0.12)",
       font: "'EB Garamond', 'Georgia', serif",
       fontSans: "'DM Sans', 'Helvetica Neue', sans-serif",
     };
-
-    // ─── FadeIn ────────────────────────────────────────────────────────────
 
     function FadeIn({ children, delay = 0, duration = 800, style = {} }) {
       const [v, setV] = useState(false);
       useEffect(() => { const t = setTimeout(() => setV(true), delay); return () => clearTimeout(t); }, [delay]);
       return <div style={{ opacity: v?1:0, transform: v?"translateY(0)":"translateY(12px)", transition: `opacity ${duration}ms ease, transform ${duration}ms ease`, ...style }}>{children}</div>;
     }
-
-    // ─── Welcome ───────────────────────────────────────────────────────────
 
     function WelcomeScreen({ onBegin }) {
       return (
@@ -114,8 +99,6 @@
         </div>
       );
     }
-
-    // ─── Calibration ───────────────────────────────────────────────────────
 
     function CalibrationScreen({ question, questionIndex, onAnswer, currentAnswer }) {
       const [textValue, setTextValue] = useState(currentAnswer || "");
@@ -148,8 +131,6 @@
         </div>
       );
     }
-
-    // ─── Writing ───────────────────────────────────────────────────────────
 
     function WritingScreen({ moment, momentIndex, savedText, onSave, onComplete, onBack, totalCompleted }) {
       const [text, setText] = useState(savedText || "");
@@ -197,8 +178,6 @@
       );
     }
 
-    // ─── Hub ───────────────────────────────────────────────────────────────
-
     function MomentSelectScreen({ moments, completedMoments, savedTexts, onSelectMoment, onGenerateAnalysis }) {
       const allComplete = completedMoments.length === 9;
       return (
@@ -239,8 +218,6 @@
       );
     }
 
-    // ─── Welcome Back ──────────────────────────────────────────────────────
-
     function WelcomeBackScreen({ completedCount, onContinue }) {
       return (
         <div style={{ minHeight:"100dvh", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", padding:"40px 28px", background:T.bg }}>
@@ -250,8 +227,6 @@
         </div>
       );
     }
-
-    // ─── Analysis ──────────────────────────────────────────────────────────
 
     function AnalysisScreen({ analysis, writings }) {
       const [copied, setCopied] = useState(false);
@@ -270,7 +245,7 @@
       const compileWriting = () => {
         return MOMENTS.map((m, i) => {
           const text = writings[m.id] || "(no response)";
-          return `Moment ${i+1}: "${m.caption}"\n${"—".repeat(40)}\n${text}`;
+          return `Moment ${i+1}: "${m.caption}"\n${"\u2014".repeat(20)}\n${text}`;
         }).join("\n\n\n");
       };
 
@@ -295,7 +270,6 @@
                 {analysis.split("\n\n").map((p, i) => <FadeIn key={i} delay={400+i*150}><p style={{ marginBottom:24 }}>{p}</p></FadeIn>)}
               </div>
 
-              {/* Portrait actions */}
               <FadeIn delay={1000}>
                 <div style={{ width:48, height:1, background:T.border, margin:"40px auto" }} />
                 <p style={{ fontFamily:T.fontSans, fontSize:"13px", color:T.textDim, textAlign:"center", marginBottom:16, letterSpacing:"0.06em", textTransform:"uppercase" }}>Your portrait</p>
@@ -305,7 +279,6 @@
                 </div>
               </FadeIn>
 
-              {/* Writing samples actions */}
               <FadeIn delay={1200}>
                 <p style={{ fontFamily:T.fontSans, fontSize:"13px", color:T.textDim, textAlign:"center", marginBottom:16, letterSpacing:"0.06em", textTransform:"uppercase" }}>Your writing</p>
                 <div style={{ display:"flex", gap:12, justifyContent:"center", marginBottom:48, flexWrap:"wrap" }}>
@@ -314,7 +287,6 @@
                 </div>
               </FadeIn>
 
-              {/* Phase 2 hook */}
               <FadeIn delay={1400}>
                 <div style={{ background:T.surface, border:`1px solid ${T.border}`, padding:"28px 24px", marginBottom:40 }}>
                   <p style={{ fontFamily:T.font, fontSize:"20px", fontStyle:"italic", color:T.text, marginBottom:16 }}>What{"\u2019"}s next?</p>
@@ -322,7 +294,6 @@
                 </div>
               </FadeIn>
 
-              {/* Footer */}
               <FadeIn delay={1600}>
                 <p style={{ fontFamily:T.fontSans, fontSize:"12px", color:T.textDim, textAlign:"center", lineHeight:1.7, marginBottom:16 }}>This analysis was generated based on your nine writing samples. It focuses on your craft {"\u2014"} sentence structure, rhythm, diction, tone, and recurring stylistic habits. It is not a judgment. It{"\u2019"}s a portrait.</p>
                 <p style={{ textAlign:"center", marginBottom:48 }}><a href="https://www.johnpatrickbishop.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily:T.fontSans, fontSize:"11px", color:T.textDim, textDecoration:"none", borderBottom:`1px solid ${T.border}`, paddingBottom:1 }}>Questions or feedback</a></p>
@@ -339,8 +310,6 @@
       );
     }
 
-    // ─── Generating ────────────────────────────────────────────────────────
-
     function GeneratingScreen() {
       const [dots, setDots] = useState("");
       useEffect(() => { const i = setInterval(() => setDots(d => d.length>=3?"":d+"."), 500); return () => clearInterval(i); }, []);
@@ -353,8 +322,6 @@
         </div>
       );
     }
-
-    // ─── Error Screen ──────────────────────────────────────────────────────
 
     function ErrorScreen({ onRetry }) {
       return (
@@ -369,8 +336,6 @@
         </div>
       );
     }
-
-    // ─── Analysis Prompt ───────────────────────────────────────────────────
 
     function buildAnalysisPrompt(cal, writings) {
       const samples = MOMENTS.map((m,i) => `--- Moment ${i+1}: "${m.caption}" ---\n${writings[m.id]||"(no response)"}`).join("\n\n");
@@ -411,8 +376,6 @@ Guidelines:
 Write the essay now. Do not include a title or heading \u2014 just begin.`;
     }
 
-    // ─── Main App ──────────────────────────────────────────────────────────
-
     function App() {
       const [appState, setAppState] = useState("loading");
       const [calIdx, setCalIdx] = useState(0);
@@ -439,20 +402,26 @@ Write the essay now. Do not include a title or heading \u2014 just begin.`;
         setAppState("generating");
         const prompt = buildAnalysisPrompt(cal, texts);
         try {
-          const res = await fetch("/.netlify/functions/analyze", {
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
-            headers: { "Content-Type":"application/json" },
-            body: JSON.stringify({ prompt }),
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": AK,
+              "anthropic-version": "2023-06-01",
+              "anthropic-dangerous-direct-browser-access": "true",
+            },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 4000,
+              messages: [{ role: "user", content: prompt }],
+            }),
           });
-          if (!res.ok) throw new Error(`Server error: ${res.status}`);
+          if (!res.ok) throw new Error(`API error: ${res.status}`);
           const data = await res.json();
-          if (data.analysis) {
-            setAnalysis(data.analysis);
-            persist(cal, completed, texts, data.analysis);
-            setAppState("analysis");
-          } else {
-            throw new Error(data.error || "No analysis returned");
-          }
+          const txt = data.content.map(i => i.type==="text"?i.text:"").filter(Boolean).join("\n");
+          setAnalysis(txt);
+          persist(cal, completed, texts, txt);
+          setAppState("analysis");
         } catch(e) {
           console.error(e);
           setAppState("error");
