@@ -1,0 +1,10 @@
+{
+  "name": "First Draft",
+  "short_name": "First Draft",
+  "description": "Find your natural writing voice through nine moments",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f3ed",
+  "theme_color": "#f7f3ed",
+  "orientation": "portrait"
+}

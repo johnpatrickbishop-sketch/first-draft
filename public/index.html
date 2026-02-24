@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#f7f3ed" />
+  <title>First Draft</title>
+  <link rel="manifest" href="manifest.json" />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: #f7f3ed; -webkit-font-smoothing: antialiased; min-height: 100dvh; }
+    body { display: flex; justify-content: center; }
+    ::selection { background: #c4956a; color: #fff; }
+    textarea::placeholder, input::placeholder { color: #b5ada4; }
+    #root { width: 100%; max-width: 640px; min-height: 100dvh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    // ─── Register Service Worker ───────────────────────────────────────────
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+
+    // ─── Data ──────────────────────────────────────────────────────────────
+
+    const MOMENTS = [
+      { id: 1, image: "Moment_1_-_The_Diner.png", caption: "They\u2019d been coming here for years. They\u2019d never spoken." },
+      { id: 2, image: "Moment_2_-_The_Campfire.png", caption: "They didn\u2019t know it yet." },
+      { id: 3, image: "Moment_3_-_The_Road.png", caption: "It had been four years." },
+      { id: 4, image: "Moment_4_-_The_Rooftop.png", caption: "They weren\u2019t supposed to be up here." },
+      { id: 5, image: "Moment_5_-_The_Dock.png", caption: "It was nothing special." },
+      { id: 6, image: "Moment_6_-_The_Doorway.png", caption: "She\u2019d think about this night for years." },
+      { id: 7, image: "Moment_7_-_The_Porch.png", caption: "Nobody remembered who started it." },
+      { id: 8, image: "Moment_8_-_The_Forest.png", caption: "The path had never been there before." },
+      { id: 9, image: "Moment_9_-_The_Hill.png", caption: "He promised himself that one day, he would get out of here." },
+    ];
+
+    const CALIBRATION_QUESTIONS = [
+      { id: "admire", question: "Name a writer, filmmaker, musician, or artist whose style you admire. Just one.", type: "text" },
+      { id: "tendency", question: "When you write something, do you tend to say too much and trim it down, or say too little and have to go back and add more?", type: "choice", choices: ["Say too much and trim", "Say too little and add"] },
+      { id: "priority", question: "Which matters more to you: how something sounds, or what something says?", type: "choice", choices: ["How it sounds", "What it says"] },
+    ];
+
+    const WRITING_INSTRUCTION = "Using this image as your guide, write a piece of a story. It can be the beginning, middle, or end. A moment. A bit of dialogue. A fragment of what happened before, or something that happens years after. It\u2019s up to you. Just have fun and don\u2019t overthink it.";
+
+    const STORAGE_KEY = "firstdraft_data_v2";
+
+    function loadData() { try { const r = localStorage.getItem(STORAGE_KEY); if (r) return JSON.parse(r); } catch(e){} return null; }
+    function saveData(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(e){} }
+
+    // ─── Theme ─────────────────────────────────────────────────────────────
+
+    const T = {
+      bg: "#f7f3ed",
+      surface: "#fff",
+      surfaceHover: "#f0ece5",
+      text: "#2c2825",
+      textMuted: "#6b6460",
+      textDim: "#9e958c",
+      accent: "#b5804e",
+      accentHover: "#c8915e",
+      accentDim: "#d4b896",
+      border: "#e2ddd5",
+      borderDark: "#cdc6bc",
+      imageShadow: "0 4px 24px rgba(0,0,0,0.12)",
+      font: "'EB Garamond', 'Georgia', serif",
+      fontSans: "'DM Sans', 'Helvetica Neue', sans-serif",
+    };
+
+    // ─── FadeIn ────────────────────────────────────────────────────────────
+
+    function FadeIn({ children, delay = 0, duration = 800, style = {} }) {
+      const [v, setV] = useState(false);
+      useEffect(() => { const t = setTimeout(() => setV(true), delay); return () => clearTimeout(t); }, [delay]);
+      return <div style={{ opacity: v?1:0, transform: v?"translateY(0)":"translateY(12px)", transition: `opacity ${duration}ms ease, transform ${duration}ms ease`, ...style }}>{children}</div>;
+    }
+
+    // ─── Welcome ───────────────────────────────────────────────────────────
+
+    function WelcomeScreen({ onBegin }) {
+      return (
+        <div style={{ minHeight:"100dvh", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", padding:"40px 28px", background:T.bg }}>
+          <FadeIn delay={200}>
+            <h1 style={{ fontFamily:T.font, fontSize:"clamp(42px, 8vw, 64px)", fontWeight:400, color:T.text, letterSpacing:"-0.02em", marginBottom:0, textAlign:"center", lineHeight:1.1, fontStyle:"italic" }}>First Draft</h1>
+          </FadeIn>
+          <FadeIn delay={600}>
+            <div style={{ width:48, height:1, background:T.accent, margin:"32px auto" }} />
+          </FadeIn>
+          <FadeIn delay={900}>
+            <div style={{ maxWidth:480, fontFamily:T.fontSans, fontSize:"15px", lineHeight:1.75, color:T.textMuted, textAlign:"center" }}>
+              <p style={{ marginBottom:20 }}>Everyone has a natural writing voice {"\u2014"} not the one you learned in school, or in the memos you draft at work. A voice as distinctive as a fingerprint. Let{"\u2019"}s find yours.</p>
+              <p style={{ marginBottom:20 }}>Here{"\u2019"}s how it works. We give you an image. You write something {"\u2014"} anything. A scene. A memory. A moment between two people. A piece of dialogue. Whatever the image pulls out of you.</p>
+              <p style={{ marginBottom:20 }}>Don{"\u2019"}t overthink it. Don{"\u2019"}t try to be good. Don{"\u2019"}t try to write a whole story. Just write.</p>
+              <p style={{ marginBottom:20 }}>There are nine of these. Do them whenever you want {"\u2014"} on the train, at lunch, at midnight. After the ninth one, we{"\u2019"}ll give you a portrait of your writing style that you{"\u2019"}ve never seen before.</p>
+              <p style={{ marginBottom:0 }}>No grades. No judgment. No one reads this but you.</p>
+            </div>
+          </FadeIn>
+          <FadeIn delay={1400}>
+            <p style={{ fontFamily:T.fontSans, fontSize:"14px", color:T.textDim, marginTop:40, marginBottom:20, textAlign:"center" }}>Answer three quick questions and then we{"\u2019"}ll start.</p>
+            <div style={{ textAlign:"center" }}>
+              <button onClick={onBegin} style={{ fontFamily:T.fontSans, fontSize:"14px", letterSpacing:"0.08em", textTransform:"uppercase", color:"#fff", background:T.accent, border:"none", borderRadius:0, padding:"14px 40px", cursor:"pointer", fontWeight:500, transition:"background 0.2s ease" }} onMouseEnter={e=>e.target.style.background=T.accentHover} onMouseLeave={e=>e.target.style.background=T.accent}>Begin</button>
+            </div>
+          </FadeIn>
+        </div>
+      );
+    }
+
+    // ─── Calibration ───────────────────────────────────────────────────────
+
+    function CalibrationScreen({ question, questionIndex, onAnswer, currentAnswer }) {
+      const [textValue, setTextValue] = useState(currentAnswer || "");
+      const [selected, setSelected] = useState(currentAnswer || "");
+      useEffect(() => { setTextValue(currentAnswer || ""); setSelected(currentAnswer || ""); }, [questionIndex, currentAnswer]);
+      const canContinue = question.type === "text" ? textValue.trim().length > 0 : selected.length > 0;
+
+      return (
+        <div style={{ minHeight:"100dvh", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", padding:"40px 28px", background:T.bg }}>
+          <FadeIn key={questionIndex} delay={100}>
+            <p style={{ fontFamily:T.fontSans, fontSize:"12px", letterSpacing:"0.1em", textTransform:"uppercase", color:T.textDim, textAlign:"center", marginBottom:32 }}>Question {questionIndex + 1} of 3</p>
+            <p style={{ fontFamily:T.font, fontSize:"clamp(22px, 5vw, 28px)", fontWeight:400, color:T.text, textAlign:"center", maxWidth:500, lineHeight:1.5, marginBottom:40, fontStyle:"italic" }}>{question.question}</p>
+
+            {question.type === "text" ? (
+              <div style={{ width:"100%", maxWidth:400, margin:"0 auto" }}>
+                <input type="text" value={textValue} onChange={e => setTextValue(e.target.value)} placeholder="Type your answer..." style={{ width:"100%", boxSizing:"border-box", background:"transparent", border:"none", borderBottom:`1px solid ${T.border}`, fontFamily:T.fontSans, fontSize:"16px", color:T.text, padding:"12px 0", outline:"none", textAlign:"center" }} onFocus={e => e.target.style.borderBottomColor = T.accent} onBlur={e => e.target.style.borderBottomColor = T.border} onKeyDown={e => { if (e.key === "Enter" && canContinue) onAnswer(textValue.trim()); }} />
+              </div>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:12, width:"100%", maxWidth:400, margin:"0 auto" }}>
+                {question.choices.map(c => (
+                  <button key={c} onClick={() => setSelected(c)} style={{ fontFamily:T.fontSans, fontSize:"15px", color:selected===c?"#fff":T.textMuted, background:selected===c?T.accent:"transparent", border:`1px solid ${selected===c?T.accent:T.border}`, borderRadius:0, padding:"14px 20px", cursor:"pointer", textAlign:"center", transition:"all 0.2s ease" }}>{c}</button>
+                ))}
+              </div>
+            )}
+
+            <div style={{ textAlign:"center", marginTop:40 }}>
+              <button onClick={() => onAnswer(question.type === "text" ? textValue.trim() : selected)} disabled={!canContinue} style={{ fontFamily:T.fontSans, fontSize:"14px", letterSpacing:"0.08em", textTransform:"uppercase", color:canContinue?"#fff":T.textDim, background:canContinue?T.accent:T.border, border:"none", borderRadius:0, padding:"14px 40px", cursor:canContinue?"pointer":"default", fontWeight:500, transition:"all 0.2s ease" }}>{questionIndex < 2 ? "Next" : "Start Writing"}</button>
+            </div>
+          </FadeIn>
+        </div>
+      );
+    }
+
+    // ─── Writing ───────────────────────────────────────────────────────────
+
+    function WritingScreen({ moment, momentIndex, savedText, onSave, onComplete, onBack, totalCompleted }) {
+      const [text, setText] = useState(savedText || "");
+      const [imageLoaded, setImageLoaded] = useState(false);
+      useEffect(() => { setText(savedText || ""); setImageLoaded(false); const f = setTimeout(() => setImageLoaded(true), 1500); return () => clearTimeout(f); }, [momentIndex, savedText]);
+      const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+
+      return (
+        <div style={{ minHeight:"100dvh", background:T.bg, display:"flex", flexDirection:"column" }}>
+          <div style={{ position:"sticky", top:0, zIndex:10, background:T.bg, padding:"12px 20px 12px", borderBottom:`1px solid ${T.border}` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <button onClick={() => onBack(text)} style={{ fontFamily:T.fontSans, fontSize:"13px", color:T.textMuted, background:"none", border:"none", cursor:"pointer", padding:"4px 0" }}>{"\u2190"} Back</button>
+              <span style={{ fontFamily:T.fontSans, fontSize:"11px", letterSpacing:"0.1em", textTransform:"uppercase", color:T.textDim }}>Moment {momentIndex+1} of 9</span>
+              <span style={{ fontFamily:T.fontSans, fontSize:"11px", color:T.textDim }}>{totalCompleted} / 9</span>
+            </div>
+            <div style={{ width:"100%", height:2, background:T.border, borderRadius:1, overflow:"hidden" }}>
+              <div style={{ width:`${(totalCompleted/9)*100}%`, height:"100%", background:T.accent, transition:"width 0.5s ease" }} />
+            </div>
+          </div>
+
+          <div style={{ position:"relative", width:"100%", aspectRatio:"16/9", overflow:"hidden", background:T.surfaceHover, boxShadow:T.imageShadow }}>
+            <img src={`images/${moment.image}`} alt="" onLoad={() => setImageLoaded(true)} onError={() => setImageLoaded(true)} style={{ width:"100%", height:"100%", objectFit:"cover", opacity:imageLoaded?1:0, transition:"opacity 0.8s ease" }} />
+            <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"linear-gradient(transparent, rgba(0,0,0,0.7))", padding:"40px 24px 20px" }}>
+              <p style={{ fontFamily:T.font, fontSize:"clamp(18px, 4vw, 24px)", fontStyle:"italic", color:"#fff", margin:0, lineHeight:1.4 }}>"{moment.caption}"</p>
+            </div>
+          </div>
+
+          <div style={{ padding:"20px 24px 0" }}>
+            <p style={{ fontFamily:T.fontSans, fontSize:"13px", lineHeight:1.7, color:T.textDim, margin:0 }}>{WRITING_INSTRUCTION}</p>
+          </div>
+
+          <div style={{ flex:1, padding:"16px 24px" }}>
+            <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Start writing..." style={{ width:"100%", boxSizing:"border-box", minHeight:220, resize:"vertical", background:T.surface, border:`1px solid ${T.border}`, borderRadius:2, fontFamily:T.font, fontSize:"16px", lineHeight:1.8, color:T.text, padding:"20px", outline:"none", WebkitAppearance:"none" }} onFocus={e => e.target.style.borderColor = T.accent} onBlur={e => e.target.style.borderColor = T.border} />
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:8 }}>
+              <span style={{ fontFamily:T.fontSans, fontSize:"12px", color:wordCount<10?T.textDim:T.textMuted }}>{wordCount} {wordCount===1?"word":"words"}{wordCount>0&&wordCount<10&&" \u2014 keep going"}</span>
+              <span style={{ fontFamily:T.fontSans, fontSize:"11px", color:T.textDim }}>50{"\u2013"}500 suggested</span>
+            </div>
+          </div>
+
+          <div style={{ padding:"16px 24px 32px", display:"flex", gap:12 }}>
+            <button onClick={() => onSave(text)} style={{ flex:1, fontFamily:T.fontSans, fontSize:"13px", letterSpacing:"0.06em", textTransform:"uppercase", color:T.textMuted, background:"transparent", border:`1px solid ${T.border}`, borderRadius:0, padding:"14px 16px", cursor:"pointer", transition:"all 0.2s ease" }} onMouseEnter={e=>e.target.style.borderColor=T.borderDark} onMouseLeave={e=>e.target.style.borderColor=T.border}>Save & Continue Later</button>
+            <button onClick={() => { if(wordCount>=10) onComplete(text); }} disabled={wordCount<10} style={{ flex:1, fontFamily:T.fontSans, fontSize:"13px", letterSpacing:"0.06em", textTransform:"uppercase", color:wordCount>=10?"#fff":T.textDim, background:wordCount>=10?T.accent:T.border, border:"none", borderRadius:0, padding:"14px 16px", cursor:wordCount>=10?"pointer":"default", fontWeight:500, transition:"all 0.2s ease" }}>Complete</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Hub ───────────────────────────────────────────────────────────────
+
+    function MomentSelectScreen({ moments, completedMoments, savedTexts, onSelectMoment, onGenerateAnalysis }) {
+      const allComplete = completedMoments.length === 9;
+      return (
+        <div style={{ minHeight:"100dvh", background:T.bg, padding:"40px 20px" }}>
+          <FadeIn delay={100}>
+            <h2 style={{ fontFamily:T.font, fontSize:"clamp(32px, 6vw, 42px)", fontWeight:400, fontStyle:"italic", color:T.text, textAlign:"center", marginBottom:8 }}>First Draft</h2>
+            <p style={{ fontFamily:T.fontSans, fontSize:"13px", color:T.textDim, textAlign:"center", marginBottom:40 }}>{completedMoments.length} of 9 moments complete</p>
+          </FadeIn>
+          <div style={{ maxWidth:500, margin:"0 auto", display:"flex", flexDirection:"column", gap:2 }}>
+            {moments.map((m, i) => {
+              const done = completedMoments.includes(m.id);
+              const draft = savedTexts[m.id] && savedTexts[m.id].length > 0 && !done;
+              const next = !done && !draft && completedMoments.length === i;
+              return (
+                <FadeIn key={m.id} delay={150+i*60}>
+                  <button onClick={() => onSelectMoment(i)} style={{ width:"100%", textAlign:"left", background:next?T.surface:"transparent", border:`1px solid ${next?T.accentDim:T.border}`, borderRadius:0, padding:"16px 20px", cursor:"pointer", display:"flex", alignItems:"center", gap:16, transition:"all 0.2s ease" }} onMouseEnter={e => e.currentTarget.style.background = T.surfaceHover} onMouseLeave={e => e.currentTarget.style.background = next?T.surface:"transparent"}>
+                    <span style={{ fontFamily:T.fontSans, fontSize:"11px", letterSpacing:"0.08em", color:done?T.accent:T.textDim, minWidth:20 }}>{done?"\u2713":`${i+1}`}</span>
+                    <span style={{ fontFamily:T.font, fontSize:"16px", fontStyle:"italic", color:done?T.textDim:T.text, flex:1 }}>"{m.caption}"</span>
+                    {draft && <span style={{ fontFamily:T.fontSans, fontSize:"10px", letterSpacing:"0.08em", textTransform:"uppercase", color:T.accent }}>Draft</span>}
+                  </button>
+                </FadeIn>
+              );
+            })}
+          </div>
+          {allComplete && (
+            <FadeIn delay={200}>
+              <div style={{ textAlign:"center", marginTop:48 }}>
+                <p style={{ fontFamily:T.font, fontSize:"20px", fontStyle:"italic", color:T.text, marginBottom:24 }}>All nine moments complete.</p>
+                <button onClick={onGenerateAnalysis} style={{ fontFamily:T.fontSans, fontSize:"14px", letterSpacing:"0.08em", textTransform:"uppercase", color:"#fff", background:T.accent, border:"none", borderRadius:0, padding:"16px 48px", cursor:"pointer", fontWeight:500, transition:"background 0.2s ease" }} onMouseEnter={e=>e.target.style.background=T.accentHover} onMouseLeave={e=>e.target.style.background=T.accent}>Reveal Your Writing Portrait</button>
+              </div>
+            </FadeIn>
+          )}
+          <FadeIn delay={800}>
+            <p style={{ fontFamily:T.fontSans, fontSize:"12px", color:T.textDim, textAlign:"center", maxWidth:360, margin:"48px auto 0", lineHeight:1.6 }}>Your writing is saved in this browser. Come back anytime to continue where you left off.</p>
+            <p style={{ textAlign:"center", marginTop:16 }}><a href="https://www.johnpatrickbishop.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily:T.fontSans, fontSize:"11px", color:T.textDim, textDecoration:"none", borderBottom:`1px solid ${T.border}`, paddingBottom:1 }}>Questions or feedback</a></p>
+          </FadeIn>
+        </div>
+      );
+    }
+
+    // ─── Welcome Back ──────────────────────────────────────────────────────
+
+    function WelcomeBackScreen({ completedCount, onContinue }) {
+      return (
+        <div style={{ minHeight:"100dvh", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", padding:"40px 28px", background:T.bg }}>
+          <FadeIn delay={200}><h1 style={{ fontFamily:T.font, fontSize:"clamp(36px, 7vw, 52px)", fontWeight:400, fontStyle:"italic", color:T.text, textAlign:"center", marginBottom:16 }}>Welcome back.</h1></FadeIn>
+          <FadeIn delay={500}><p style={{ fontFamily:T.fontSans, fontSize:"15px", color:T.textMuted, textAlign:"center", marginBottom:40 }}>You{"\u2019"}ve completed {completedCount} of 9 moments.</p></FadeIn>
+          <FadeIn delay={800}><button onClick={onContinue} style={{ fontFamily:T.fontSans, fontSize:"14px", letterSpacing:"0.08em", textTransform:"uppercase", color:"#fff", background:T.accent, border:"none", borderRadius:0, padding:"14px 40px", cursor:"pointer", fontWeight:500 }}>Continue</button></FadeIn>
+        </div>
+      );
+    }
+
+    // ─── Analysis ──────────────────────────────────────────────────────────
+
+    function AnalysisScreen({ analysis, writings }) {
+      const [copied, setCopied] = useState(false);
+      const [copiedWriting, setCopiedWriting] = useState(false);
+
+      const handleCopy = () => {
+        navigator.clipboard.writeText(analysis).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => { const ta = document.createElement("textarea"); ta.value = analysis; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); setCopied(true); setTimeout(() => setCopied(false), 2000); });
+      };
+
+      const handleEmail = () => {
+        const s = encodeURIComponent("My Writing Portrait \u2014 First Draft");
+        const b = encodeURIComponent("Here's my writing portrait from First Draft:\n\n" + analysis);
+        window.open(`mailto:?subject=${s}&body=${b}`, "_self");
+      };
+
+      const compileWriting = () => {
+        return MOMENTS.map((m, i) => {
+          const text = writings[m.id] || "(no response)";
+          return `Moment ${i+1}: "${m.caption}"\n${"—".repeat(40)}\n${text}`;
+        }).join("\n\n\n");
+      };
+
+      const handleCopyWriting = () => {
+        const compiled = compileWriting();
+        navigator.clipboard.writeText(compiled).then(() => { setCopiedWriting(true); setTimeout(() => setCopiedWriting(false), 2000); }).catch(() => { const ta = document.createElement("textarea"); ta.value = compiled; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); setCopiedWriting(true); setTimeout(() => setCopiedWriting(false), 2000); });
+      };
+
+      const handleEmailWriting = () => {
+        const s = encodeURIComponent("My Writing \u2014 First Draft");
+        const b = encodeURIComponent("Here are my nine writing samples from First Draft:\n\n" + compileWriting());
+        window.open(`mailto:?subject=${s}&body=${b}`, "_self");
+      };
+
+      return (
+        <div style={{ minHeight:"100dvh", background:T.bg, padding:"40px 24px 60px" }}>
+          <FadeIn delay={200}>
+            <div style={{ maxWidth:640, margin:"0 auto" }}>
+              <h2 style={{ fontFamily:T.font, fontSize:"clamp(28px, 6vw, 38px)", fontWeight:400, fontStyle:"italic", color:T.text, textAlign:"center", marginBottom:8 }}>Your Writing Portrait</h2>
+              <div style={{ width:48, height:1, background:T.accent, margin:"24px auto 40px" }} />
+              <div style={{ fontFamily:T.font, fontSize:"17px", lineHeight:1.9, color:T.textMuted }}>
+                {analysis.split("\n\n").map((p, i) => <FadeIn key={i} delay={400+i*150}><p style={{ marginBottom:24 }}>{p}</p></FadeIn>)}
+              </div>
+
+              {/* Portrait actions */}
+              <FadeIn delay={1000}>
+                <div style={{ width:48, height:1, background:T.border, margin:"40px auto" }} />
+                <p style={{ fontFamily:T.fontSans, fontSize:"13px", color:T.textDim, textAlign:"center", marginBottom:16, letterSpacing:"0.06em", textTransform:"uppercase" }}>Your portrait</p>
+                <div style={{ display:"flex", gap:12, justifyContent:"center", marginBottom:32, flexWrap:"wrap" }}>
+                  <button onClick={handleCopy} style={{ fontFamily:T.fontSans, fontSize:"13px", letterSpacing:"0.06em", textTransform:"uppercase", color:copied?T.accent:T.textMuted, background:"transparent", border:`1px solid ${copied?T.accent:T.border}`, borderRadius:0, padding:"12px 24px", cursor:"pointer", transition:"all 0.2s ease" }}>{copied?"Copied":"Copy to Clipboard"}</button>
+                  <button onClick={handleEmail} style={{ fontFamily:T.fontSans, fontSize:"13px", letterSpacing:"0.06em", textTransform:"uppercase", color:"#fff", background:T.accent, border:"none", borderRadius:0, padding:"12px 24px", cursor:"pointer", fontWeight:500, transition:"background 0.2s ease" }} onMouseEnter={e=>e.target.style.background=T.accentHover} onMouseLeave={e=>e.target.style.background=T.accent}>Email to Myself</button>
+                </div>
+              </FadeIn>
+
+              {/* Writing samples actions */}
+              <FadeIn delay={1200}>
+                <p style={{ fontFamily:T.fontSans, fontSize:"13px", color:T.textDim, textAlign:"center", marginBottom:16, letterSpacing:"0.06em", textTransform:"uppercase" }}>Your writing</p>
+                <div style={{ display:"flex", gap:12, justifyContent:"center", marginBottom:48, flexWrap:"wrap" }}>
+                  <button onClick={handleCopyWriting} style={{ fontFamily:T.fontSans, fontSize:"13px", letterSpacing:"0.06em", textTransform:"uppercase", color:copiedWriting?T.accent:T.textMuted, background:"transparent", border:`1px solid ${copiedWriting?T.accent:T.border}`, borderRadius:0, padding:"12px 24px", cursor:"pointer", transition:"all 0.2s ease" }}>{copiedWriting?"Copied":"Copy Writing"}</button>
+                  <button onClick={handleEmailWriting} style={{ fontFamily:T.fontSans, fontSize:"13px", letterSpacing:"0.06em", textTransform:"uppercase", color:T.textMuted, background:"transparent", border:`1px solid ${T.border}`, borderRadius:0, padding:"12px 24px", cursor:"pointer", transition:"all 0.2s ease" }} onMouseEnter={e=>e.target.style.borderColor=T.borderDark} onMouseLeave={e=>e.target.style.borderColor=T.border}>Email Writing</button>
+                </div>
+              </FadeIn>
+
+              {/* Phase 2 hook */}
+              <FadeIn delay={1400}>
+                <div style={{ background:T.surface, border:`1px solid ${T.border}`, padding:"28px 24px", marginBottom:40 }}>
+                  <p style={{ fontFamily:T.font, fontSize:"20px", fontStyle:"italic", color:T.text, marginBottom:16 }}>What{"\u2019"}s next?</p>
+                  <p style={{ fontFamily:T.fontSans, fontSize:"14px", lineHeight:1.7, color:T.textMuted, marginBottom:0 }}>This analysis is more than a portrait {"\u2014"} it{"\u2019"}s a blueprint. You can use it to build a custom AI agent that writes in your voice. Your writing style, captured here, becomes the foundation for a tool that thinks and communicates the way you do. If you{"\u2019"}re interested in taking that step, talk to Bishop.</p>
+                </div>
+              </FadeIn>
+
+              {/* Footer */}
+              <FadeIn delay={1600}>
+                <p style={{ fontFamily:T.fontSans, fontSize:"12px", color:T.textDim, textAlign:"center", lineHeight:1.7, marginBottom:16 }}>This analysis was generated based on your nine writing samples. It focuses on your craft {"\u2014"} sentence structure, rhythm, diction, tone, and recurring stylistic habits. It is not a judgment. It{"\u2019"}s a portrait.</p>
+                <p style={{ textAlign:"center", marginBottom:48 }}><a href="https://www.johnpatrickbishop.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily:T.fontSans, fontSize:"11px", color:T.textDim, textDecoration:"none", borderBottom:`1px solid ${T.border}`, paddingBottom:1 }}>Questions or feedback</a></p>
+              </FadeIn>
+
+              <FadeIn delay={2000}>
+                <div style={{ textAlign:"center" }}>
+                  <button onClick={() => { if(window.confirm("This will erase all your writing and your analysis. Are you sure?")) { localStorage.removeItem(STORAGE_KEY); window.location.reload(); }}} style={{ fontFamily:T.fontSans, fontSize:"11px", color:T.textDim, background:"none", border:"none", cursor:"pointer", padding:"8px 16px", opacity:0.4 }} onMouseEnter={e => e.target.style.opacity=0.8} onMouseLeave={e => e.target.style.opacity=0.4}>Start over with a blank slate</button>
+                </div>
+              </FadeIn>
+            </div>
+          </FadeIn>
+        </div>
+      );
+    }
+
+    // ─── Generating ────────────────────────────────────────────────────────
+
+    function GeneratingScreen() {
+      const [dots, setDots] = useState("");
+      useEffect(() => { const i = setInterval(() => setDots(d => d.length>=3?"":d+"."), 500); return () => clearInterval(i); }, []);
+      return (
+        <div style={{ minHeight:"100dvh", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", padding:"40px 28px", background:T.bg }}>
+          <FadeIn delay={100}>
+            <h2 style={{ fontFamily:T.font, fontSize:"clamp(24px, 5vw, 32px)", fontWeight:400, fontStyle:"italic", color:T.text, textAlign:"center", marginBottom:16 }}>Reading your writing{dots}</h2>
+            <p style={{ fontFamily:T.fontSans, fontSize:"14px", color:T.textDim, textAlign:"center" }}>This takes about 30 seconds.</p>
+          </FadeIn>
+        </div>
+      );
+    }
+
+    // ─── Error Screen ──────────────────────────────────────────────────────
+
+    function ErrorScreen({ onRetry }) {
+      return (
+        <div style={{ minHeight:"100dvh", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", padding:"40px 28px", background:T.bg }}>
+          <FadeIn delay={100}>
+            <h2 style={{ fontFamily:T.font, fontSize:"clamp(24px, 5vw, 32px)", fontWeight:400, fontStyle:"italic", color:T.text, textAlign:"center", marginBottom:16 }}>Something went wrong.</h2>
+            <p style={{ fontFamily:T.fontSans, fontSize:"14px", color:T.textMuted, textAlign:"center", maxWidth:400, lineHeight:1.7, marginBottom:32 }}>Don{"\u2019"}t worry {"\u2014"} your writing is safe. This was a network issue generating your analysis. You can try again, or reach out to Bishop for help.</p>
+            <div style={{ textAlign:"center" }}>
+              <button onClick={onRetry} style={{ fontFamily:T.fontSans, fontSize:"14px", letterSpacing:"0.08em", textTransform:"uppercase", color:"#fff", background:T.accent, border:"none", borderRadius:0, padding:"14px 40px", cursor:"pointer", fontWeight:500 }}>Try Again</button>
+            </div>
+          </FadeIn>
+        </div>
+      );
+    }
+
+    // ─── Analysis Prompt ───────────────────────────────────────────────────
+
+    function buildAnalysisPrompt(cal, writings) {
+      const samples = MOMENTS.map((m,i) => `--- Moment ${i+1}: "${m.caption}" ---\n${writings[m.id]||"(no response)"}`).join("\n\n");
+      return `You are a literary critic and writing analyst with the sensibility of a thoughtful graduate student in a top MFA program. You have been given nine short writing samples from a single participant in a creative writing exercise called "First Draft."
+
+Before writing, the participant answered three calibration questions:
+- Artist/writer/filmmaker they admire: ${cal.admire||"Not provided"}
+- Writing tendency: ${cal.tendency||"Not provided"}
+- Priority (sound vs. meaning): ${cal.priority||"Not provided"}
+
+Here are their nine writing samples, each written in response to a different evocative image with a short caption:
+
+${samples}
+
+---
+
+Write a 1,000\u20131,500 word literary-style essay analyzing this participant's writing craft. Focus ONLY on:
+- Sentence structure and syntax patterns
+- Rhythm and pacing
+- Diction (word choice, register, vocabulary)
+- Tone and emotional texture
+- Clarity and compression
+- Recurring stylistic habits and tendencies
+
+Guidelines:
+- Quote directly from their writing to support your observations. Use their actual phrases and sentences.
+- Where relevant, reference their calibration answers \u2014 compare their self-perception to what actually shows up in the writing. If they said they admire a particular artist, note any resonance or divergence with that influence.
+- Be warm, perceptive, and specific. Your tone should convey that you genuinely enjoyed reading this writing and found it interesting. But do not flatter or exaggerate. Let your specificity do the work of encouragement \u2014 when you notice something well done, name exactly what it is and why it works rather than offering generic praise.
+- Include one honest, constructive observation about a pattern or tendency that could be worth the writer's attention. This is not a criticism \u2014 it is a gift. Frame it as something to explore or be curious about, not something to fix. For example: a tendency toward abstraction when concrete detail might land harder, or a habit of pulling back from emotional specificity at key moments. Be precise and gentle.
+- Do NOT evaluate their storytelling ability or the quality of their ideas.
+- Do NOT psychoanalyze them or make claims about their personality.
+- Do NOT use metrics, scores, charts, or grades.
+- Do NOT use bullet points or lists. Write in flowing prose paragraphs.
+- The essay should read like a thoughtful close reading \u2014 warm but honest, specific but not clinical.
+- The desired reaction from the reader is: "I didn\u2019t know I wrote like that."
+- After the main analysis, end with a section that begins: "If you enjoyed this process, you might find kinship in the work of..." and recommend 2\u20133 writers whose style, sensibility, or approach resonates with this participant's natural voice. For each writer, explain specifically what connects them \u2014 not just "you write like X" but what particular quality or tendency they share. These should feel like introductions to kindred spirits, not comparisons to live up to.
+
+Write the essay now. Do not include a title or heading \u2014 just begin.`;
+    }
+
+    // ─── Main App ──────────────────────────────────────────────────────────
+
+    function App() {
+      const [appState, setAppState] = useState("loading");
+      const [calIdx, setCalIdx] = useState(0);
+      const [cal, setCal] = useState({});
+      const [completed, setCompleted] = useState([]);
+      const [texts, setTexts] = useState({});
+      const [curMoment, setCurMoment] = useState(0);
+      const [analysis, setAnalysis] = useState("");
+
+      useEffect(() => {
+        const data = loadData();
+        if (data) {
+          setCal(data.calibration || {}); setCompleted(data.completedMoments || []);
+          setTexts(data.savedTexts || {}); setAnalysis(data.analysis || "");
+          if (data.analysis) setAppState("analysis");
+          else if (data.calibration && Object.keys(data.calibration).length === 3) setAppState("welcomeBack");
+          else setAppState("welcome");
+        } else setAppState("welcome");
+      }, []);
+
+      const persist = useCallback((c, comp, t, a) => saveData({ calibration:c, completedMoments:comp, savedTexts:t, analysis:a }), []);
+
+      const doGenerate = async () => {
+        setAppState("generating");
+        const prompt = buildAnalysisPrompt(cal, texts);
+        try {
+          const res = await fetch("/.netlify/functions/analyze", {
+            method: "POST",
+            headers: { "Content-Type":"application/json" },
+            body: JSON.stringify({ prompt }),
+          });
+          if (!res.ok) throw new Error(`Server error: ${res.status}`);
+          const data = await res.json();
+          if (data.analysis) {
+            setAnalysis(data.analysis);
+            persist(cal, completed, texts, data.analysis);
+            setAppState("analysis");
+          } else {
+            throw new Error(data.error || "No analysis returned");
+          }
+        } catch(e) {
+          console.error(e);
+          setAppState("error");
+        }
+      };
+
+      return (
+        <div style={{ maxWidth:640, margin:"0 auto", minHeight:"100dvh", background:T.bg }}>
+          {appState==="loading"&&null}
+          {appState==="welcome"&&<WelcomeScreen onBegin={() => { setCalIdx(0); setAppState("calibration"); }} />}
+          {appState==="welcomeBack"&&<WelcomeBackScreen completedCount={completed.length} onContinue={() => setAppState(analysis?"analysis":"hub")} />}
+          {appState==="calibration"&&<CalibrationScreen question={CALIBRATION_QUESTIONS[calIdx]} questionIndex={calIdx} currentAnswer={cal[CALIBRATION_QUESTIONS[calIdx].id]||""} onAnswer={(a) => {
+            const q = CALIBRATION_QUESTIONS[calIdx]; const nc = {...cal,[q.id]:a}; setCal(nc);
+            if(calIdx<2) setCalIdx(calIdx+1);
+            else { persist(nc,completed,texts,analysis); setAppState("hub"); }
+          }} />}
+          {appState==="hub"&&<MomentSelectScreen moments={MOMENTS} completedMoments={completed} savedTexts={texts} onSelectMoment={(i) => { setCurMoment(i); setAppState("writing"); }} onGenerateAnalysis={doGenerate} />}
+          {appState==="writing"&&<WritingScreen moment={MOMENTS[curMoment]} momentIndex={curMoment} savedText={texts[MOMENTS[curMoment].id]||""} totalCompleted={completed.length}
+            onSave={(t) => { const nt={...texts,[MOMENTS[curMoment].id]:t}; setTexts(nt); persist(cal,completed,nt,analysis); setAppState("hub"); }}
+            onComplete={(t) => { const nt={...texts,[MOMENTS[curMoment].id]:t}; const nc=[...completed]; if(!nc.includes(MOMENTS[curMoment].id))nc.push(MOMENTS[curMoment].id); setTexts(nt); setCompleted(nc); persist(cal,nc,nt,analysis); setAppState("hub"); }}
+            onBack={(t) => { if(t&&t.trim().length>0){const nt={...texts,[MOMENTS[curMoment].id]:t};setTexts(nt);persist(cal,completed,nt,analysis);} setAppState("hub"); }}
+          />}
+          {appState==="generating"&&<GeneratingScreen />}
+          {appState==="error"&&<ErrorScreen onRetry={doGenerate} />}
+          {appState==="analysis"&&<AnalysisScreen analysis={analysis} writings={texts} />}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
